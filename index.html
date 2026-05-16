@@ -146,25 +146,27 @@
   box-shadow:0 3px 0 #0369a1;
 }
     .cinna-mini{
-      width:54px;
-      height:54px;
-      border-radius:20px;
-      background-image:var(--okinawa-bg);
-      background-size:310px auto;
-      background-position:20% 72%;
-      border:2px solid rgba(125,211,252,.95);
-      box-shadow:0 6px 14px rgba(14,165,233,.18);
+      width:58px;
+      height:48px;
       flex:none;
       position:relative;
-      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:30px;
+      line-height:1;
+      filter:drop-shadow(0 5px 8px rgba(14,165,233,.18));
     }
-    .cinna-mini::after{
-      content:"🐶";
-      position:absolute;
-      right:-1px;
-      bottom:-5px;
-      font-size:17px;
-      filter:drop-shadow(0 1px 1px white);
+    .cinna-mini::before{
+      content:"૮꒰ ˶• ༝ •˶꒱ა";
+      font-size:28px;
+      white-space:nowrap;
+    }
+    .cinna-welcome{
+      font-size:54px;
+      line-height:1;
+      margin-bottom:8px;
+      filter:drop-shadow(0 5px 8px rgba(14,165,233,.18));
     }
   </style>
 </head>
@@ -204,6 +206,7 @@ function WelcomeScreen({onStart}){
         boxShadow:'0 10px 40px rgba(0,0,0,.25)',
         textAlign:'center'
       }}>
+        <div className="cinna-welcome">૮꒰ ˶• ༝ •˶꒱ა</div>
         <div style={{fontSize:'12px',fontWeight:'900',letterSpacing:'0.15em',color:'#0284c7'}}>OKINAWA FAMILY TRIP</div>
         <div style={{fontSize:'32px',fontWeight:'1000',marginTop:'8px',color:'#0f172a'}}>2026 沖繩親子旅行</div>
         <div style={{marginTop:'12px',fontWeight:'700',color:'#475569'}}>🌺 美麗海水族館・沖繩自駕 🌺</div>
