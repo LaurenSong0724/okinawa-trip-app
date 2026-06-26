@@ -341,8 +341,43 @@ function dayHTML(){
   </div></footer>`;
 }
 
+
+const PEOPLE=['大姐','豬豬','肥','佩蒂'];
+function computeSplits(total){
+  const people=PEOPLE;
+  const splits={}; people.forEach(p=>splits[p]=0);
+  const checked=[];
+  const fixed={};
+  let fixedSum=0;
+  people.forEach(p=>{
+    const isOn=document.getElementById('split-'+p)?.checked;
+    const fixedVal=Number((document.getElementById('fixed-'+p)?.value||'').replace(/[^0-9.]/g,''));
+    if(isOn) checked.push(p);
+    if(fixedVal>0){ fixed[p]=Math.round(fixedVal); fixedSum+=Math.round(fixedVal); }
+  });
+  if(fixedSum>0){
+    Object.keys(fixed).forEach(p=>splits[p]=fixed[p]);
+    const remaining=Math.max(0,total-fixedSum);
+    const sharePeople=people.filter(p=>checked.includes(p) && !fixed[p]);
+    if(remaining>0 && sharePeople.length){
+      let totalParts=0;
+      const parts={};
+      sharePeople.forEach(p=>{ const v=Number(document.getElementById('part-'+p)?.value||1); parts[p]=v>0?v:1; totalParts+=parts[p]; });
+      let used=0;
+      sharePeople.forEach((p,idx)=>{ const val=idx===sharePeople.length-1 ? remaining-used : Math.round(remaining*parts[p]/totalParts); splits[p]+=val; used+=val; });
+    }
+    return splits;
+  }
+  const sharePeople=checked.length?checked:people;
+  let totalParts=0;
+  const parts={};
+  sharePeople.forEach(p=>{ const v=Number(document.getElementById('part-'+p)?.value||1); parts[p]=v>0?v:1; totalParts+=parts[p]; });
+  let used=0;
+  sharePeople.forEach((p,idx)=>{ const val=idx===sharePeople.length-1 ? total-used : Math.round(total*parts[p]/totalParts); splits[p]=val; used+=val; });
+  return splits;
+}
 function settlementHTML(){
-  const people=['大姐','豬豬','肥','佩蒂'];
+  const people=PEOPLE;
   const paid={}; const owed={}; people.forEach(p=>{paid[p]=0; owed[p]=0;});
   state.money.forEach(r=>{
     if(paid[r.payer]!==undefined) paid[r.payer]+=Number(r.twd||0);
@@ -351,52 +386,53 @@ function settlementHTML(){
   });
   const total=people.reduce((s,p)=>s+paid[p],0);
   if(!total){
-    return `<div class="card settlement-card"><div class="day-label">結算</div><div class="settle-empty">目前還沒有支出，新增後會自動計算最少轉帳次數。</div></div>`;
+    return `<div class="card settlement-card"><details class="settle-details"><summary>💰 查看最少轉帳結算</summary><div class="settle-details-body"><div class="settle-empty">目前還沒有支出。</div></div></details></div>`;
   }
   const creditors=[]; const debtors=[];
   people.forEach(p=>{
-    const bal=paid[p]-owed[p];
+    const bal=Math.round(paid[p]-owed[p]);
     if(bal>0) creditors.push({p,amt:bal});
     if(bal<0) debtors.push({p,amt:-bal});
   });
+  creditors.sort((a,b)=>b.amt-a.amt); debtors.sort((a,b)=>b.amt-a.amt);
   let i=0,j=0,tx=[];
   while(i<debtors.length && j<creditors.length){
     const amt=Math.min(debtors[i].amt,creditors[j].amt);
     if(amt>0) tx.push({from:debtors[i].p,to:creditors[j].p,amt});
     debtors[i].amt-=amt; creditors[j].amt-=amt;
-    if(debtors[i].amt===0) i++;
-    if(creditors[j].amt===0) j++;
+    if(debtors[i].amt<=0) i++;
+    if(creditors[j].amt<=0) j++;
   }
   const transfers=tx.length?tx.map(t=>`<div class="settle-transfer"><b>${esc(t.from)}</b> 轉給 <b>${esc(t.to)}</b><br><span>NT$ ${t.amt.toLocaleString()}</span></div>`).join(''):'<div class="settle-empty">目前不需要轉帳。</div>';
   return `<div class="card settlement-card">
-    <div class="day-label">結算</div>
-    <details class="settle-details"><summary>查看最少轉帳方式</summary><div class="settle-details-body">${transfers}</div></details>
+    <details class="settle-details"><summary>💰 查看最少轉帳結算</summary><div class="settle-details-body">${transfers}</div></details>
   </div>`;
 }
 function moneyHTML(){
-  const people=['大姐','豬豬','肥','佩蒂'];
-  const totalJPY=state.money.reduce((s,r)=>s+Number(r.amount||0),0);
-  const totalTWD=state.money.reduce((s,r)=>s+Number(r.twd||0),0);
+  const people=PEOPLE;
+  const totalJPY=state.money.reduce((sum,r)=>sum+Number(r.amount||0),0);
+  const totalTWD=state.money.reduce((sum,r)=>sum+Number(r.twd||0),0);
   const rows=state.money.map((r,i)=>{
     const splitText=Object.entries(r.splits||{}).filter(([p,v])=>Number(v)>0).map(([p,v])=>`${p} NT$ ${Number(v).toLocaleString()}`).join('、');
     return `<div class="item-card">
-    <div class="money-row">
-      <div>
-        <div class="name">${esc(r.item)}</div>
-        <div class="money-meta">
-          <span class="tag-btn">👤 ${esc(r.payer)}</span>
-          <span class="tag-btn">💳 ${esc(r.method)}</span>
-          <span class="tag-btn">匯率 ${esc(r.rate)}</span>
+      <div class="money-row">
+        <div>
+          <div class="name">${esc(r.item)}</div>
+          <div class="money-meta">
+            <span class="tag-btn">👤 ${esc(r.payer)}</span>
+            <span class="tag-btn">💳 ${esc(r.method)}</span>
+            <span class="tag-btn">匯率 ${esc(r.rate)}</span>
+          </div>
+          ${splitText?`<div style="margin-top:7px;font-size:.78rem;font-weight:850;color:#64748b">分攤：${esc(splitText)}</div>`:''}
+          <button class="money-delete" data-del="${i}">刪除</button>
         </div>
-        ${splitText?`<div style="margin-top:7px;font-size:.78rem;font-weight:850;color:#64748b">分攤：${esc(splitText)}</div>`:''}
-        <button class="money-delete" data-del="${i}">刪除</button>
+        <div style="text-align:right;font-weight:1000;color:#f97316">
+          <div>¥ ${Number(r.amount).toLocaleString()}</div>
+          <div style="color:#0369a1;font-size:.86rem">NT$ ${Number(r.twd).toLocaleString()}</div>
+        </div>
       </div>
-      <div style="text-align:right;font-weight:1000;color:#f97316">
-        <div>¥ ${Number(r.amount).toLocaleString()}</div>
-        <div style="color:#0369a1;font-size:.86rem">NT$ ${Number(r.twd).toLocaleString()}</div>
-      </div>
-    </div>
-  </div>`}).join('');
+    </div>`
+  }).join('');
   const splitRows=people.map(p=>`<div class="split-person"><label><input type="checkbox" id="split-${p}" checked />${p}</label><input id="part-${p}" type="number" min="0" step="0.5" value="1" placeholder="份數" /><input id="fixed-${p}" type="text" inputmode="numeric" placeholder="指定NT$" /></div>`).join('');
   return `<main class="scroll">
     <section>
@@ -419,7 +455,7 @@ function moneyHTML(){
           <div><label>匯率</label><input class="money-input" id="m-rate" inputmode="decimal" value="${esc(state.rate)}" /></div>
         </div>
         <div class="split-box">
-          <div class="split-title">分攤設定：勾選分攤者並填份數；若填「指定NT$」則優先用指定金額</div>
+          <div class="split-title">分攤設定：誰要分攤就勾誰；份數可填 0.5 / 1 / 2；若填「指定NT$」會優先用指定金額。</div>
           ${splitRows}
         </div>
         <button class="add-money" id="add-money">新增支出並換算</button>
@@ -490,6 +526,8 @@ function bind(){
     if(!item || !amount || !rate) return;
     const twd=Math.round(amount*rate);
     const splits=computeSplits(twd);
+    const splitTotal=Object.values(splits).reduce((a,b)=>a+Number(b||0),0);
+    if(!splitTotal){ alert('請至少選一位分攤者，或填指定 NT$ 金額。'); return; }
     state.rate=rate;
     state.money.push({item,payer,method,amount,rate,twd,splits});
     saveMoney();
