@@ -185,6 +185,27 @@ footer{
 .settle-transfer{background:#fff7ed;border:1px solid #fed7aa;border-radius:18px;padding:.65rem .75rem;margin:.45rem 0;font-size:.88rem;color:#334155;font-weight:900}
 .settle-transfer span{color:#f97316;font-size:1.05rem;font-weight:1000}
 .settle-empty{font-size:.86rem;color:#64748b;font-weight:850;background:#fff;border:1px dashed #bae6fd;border-radius:18px;padding:.75rem}
+
+.parking-box{margin-top:14px;border:1px solid #bae6fd;background:#f0f9ff;border-radius:20px;overflow:hidden}
+.parking-box summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:1000;color:#0369a1;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.parking-box summary::-webkit-details-marker{display:none}
+.parking-list{padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+.parking-card{background:white;border:1px solid #dff6ff;border-radius:16px;padding:11px 12px;box-shadow:0 4px 12px rgba(14,165,233,.08)}
+.parking-name{font-weight:1000;color:#172033;font-size:.9rem;margin-bottom:5px}
+.parking-price{font-weight:850;color:#475569;font-size:.78rem;line-height:1.5;white-space:pre-line}
+.parking-map{display:inline-block;margin-top:8px;padding:7px 12px;border-radius:999px;background:#0ea5e9;color:white;text-decoration:none;font-weight:1000;font-size:.78rem;box-shadow:0 3px 0 #0369a1}
+.split-box{margin-top:12px;border:1px solid #bae6fd;background:#f8fdff;border-radius:20px;padding:12px}
+.split-title{font-size:.78rem;color:#0369a1;font-weight:1000;margin-bottom:8px}
+.split-person{display:grid;grid-template-columns:78px 1fr 1fr;gap:7px;align-items:center;margin:7px 0;font-size:.78rem;font-weight:900;color:#334155}
+.split-person input[type="number"],.split-person input[type="text"]{border:1px solid #bae6fd;border-radius:12px;padding:8px;width:100%;font-size:.78rem;background:white}
+.split-person label{display:flex;align-items:center;gap:5px;margin:0;color:#334155;font-size:.78rem}
+.settle-details{margin-top:0}
+.settle-details summary{cursor:pointer;list-style:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:18px;padding:.75rem .85rem;font-weight:1000;color:#f97316}
+.settle-details summary::-webkit-details-marker{display:none}
+.settle-details-body{padding-top:.55rem}
+.settle-transfer{background:#fff;border:1px solid #fed7aa;border-radius:18px;padding:.65rem .75rem;margin:.45rem 0;font-size:.9rem;color:#334155;font-weight:950}
+.settle-transfer span{color:#f97316;font-size:1.08rem;font-weight:1000}
+
 </style>
 </head>
 <body>
@@ -322,18 +343,19 @@ function dayHTML(){
 
 function settlementHTML(){
   const people=['大姐','豬豬','肥','佩蒂'];
-  const paid={}; people.forEach(p=>paid[p]=0);
-  state.money.forEach(r=>{ if(paid[r.payer]!==undefined) paid[r.payer]+=Number(r.twd||0); });
+  const paid={}; const owed={}; people.forEach(p=>{paid[p]=0; owed[p]=0;});
+  state.money.forEach(r=>{
+    if(paid[r.payer]!==undefined) paid[r.payer]+=Number(r.twd||0);
+    const splits=r.splits||{};
+    Object.keys(splits).forEach(p=>{ if(owed[p]!==undefined) owed[p]+=Number(splits[p]||0); });
+  });
   const total=people.reduce((s,p)=>s+paid[p],0);
   if(!total){
     return `<div class="card settlement-card"><div class="day-label">結算</div><div class="settle-empty">目前還沒有支出，新增後會自動計算最少轉帳次數。</div></div>`;
   }
-  const base=Math.floor(total/people.length);
-  let rem=total%people.length;
-  const share={}; people.forEach((p,i)=>{share[p]=base+(i<rem?1:0);});
   const creditors=[]; const debtors=[];
   people.forEach(p=>{
-    const bal=paid[p]-share[p];
+    const bal=paid[p]-owed[p];
     if(bal>0) creditors.push({p,amt:bal});
     if(bal<0) debtors.push({p,amt:-bal});
   });
@@ -345,20 +367,19 @@ function settlementHTML(){
     if(debtors[i].amt===0) i++;
     if(creditors[j].amt===0) j++;
   }
-  const rows=people.map(p=>`<div class="settle-person"><span>${esc(p)}</span><span>已付 NT$ ${paid[p].toLocaleString()}｜應付 NT$ ${share[p].toLocaleString()}｜${paid[p]-share[p]>=0?'應收':'應付'} NT$ ${Math.abs(paid[p]-share[p]).toLocaleString()}</span></div>`).join('');
-  const transfers=tx.length?tx.map(t=>`<div class="settle-transfer"><b>${esc(t.from)}</b> 轉給 <b>${esc(t.to)}</b><br><span>NT$ ${t.amt.toLocaleString()}</span></div>`).join(''):'<div class="settle-empty">目前大家已經剛好平均，不需要轉帳。</div>';
+  const transfers=tx.length?tx.map(t=>`<div class="settle-transfer"><b>${esc(t.from)}</b> 轉給 <b>${esc(t.to)}</b><br><span>NT$ ${t.amt.toLocaleString()}</span></div>`).join(''):'<div class="settle-empty">目前不需要轉帳。</div>';
   return `<div class="card settlement-card">
-    <div class="day-label">最少轉帳結算</div>
-    <div class="settle-summary">總支出 NT$ ${total.toLocaleString()}，4 人平均分攤。</div>
-    <div class="settle-people">${rows}</div>
-    <div class="settle-title">轉帳方式</div>
-    ${transfers}
+    <div class="day-label">結算</div>
+    <details class="settle-details"><summary>查看最少轉帳方式</summary><div class="settle-details-body">${transfers}</div></details>
   </div>`;
 }
 function moneyHTML(){
+  const people=['大姐','豬豬','肥','佩蒂'];
   const totalJPY=state.money.reduce((s,r)=>s+Number(r.amount||0),0);
   const totalTWD=state.money.reduce((s,r)=>s+Number(r.twd||0),0);
-  const rows=state.money.map((r,i)=>`<div class="item-card">
+  const rows=state.money.map((r,i)=>{
+    const splitText=Object.entries(r.splits||{}).filter(([p,v])=>Number(v)>0).map(([p,v])=>`${p} NT$ ${Number(v).toLocaleString()}`).join('、');
+    return `<div class="item-card">
     <div class="money-row">
       <div>
         <div class="name">${esc(r.item)}</div>
@@ -367,6 +388,7 @@ function moneyHTML(){
           <span class="tag-btn">💳 ${esc(r.method)}</span>
           <span class="tag-btn">匯率 ${esc(r.rate)}</span>
         </div>
+        ${splitText?`<div style="margin-top:7px;font-size:.78rem;font-weight:850;color:#64748b">分攤：${esc(splitText)}</div>`:''}
         <button class="money-delete" data-del="${i}">刪除</button>
       </div>
       <div style="text-align:right;font-weight:1000;color:#f97316">
@@ -374,7 +396,8 @@ function moneyHTML(){
         <div style="color:#0369a1;font-size:.86rem">NT$ ${Number(r.twd).toLocaleString()}</div>
       </div>
     </div>
-  </div>`).join('');
+  </div>`}).join('');
+  const splitRows=people.map(p=>`<div class="split-person"><label><input type="checkbox" id="split-${p}" checked />${p}</label><input id="part-${p}" type="number" min="0" step="0.5" value="1" placeholder="份數" /><input id="fixed-${p}" type="text" inputmode="numeric" placeholder="指定NT$" /></div>`).join('');
   return `<main class="scroll">
     <section>
       <div class="card money-card">
@@ -394,6 +417,10 @@ function moneyHTML(){
         <div class="money-grid">
           <div><label>金額（日圓）</label><input class="money-input" id="m-amount" inputmode="numeric" placeholder="JPY" /></div>
           <div><label>匯率</label><input class="money-input" id="m-rate" inputmode="decimal" value="${esc(state.rate)}" /></div>
+        </div>
+        <div class="split-box">
+          <div class="split-title">分攤設定：勾選分攤者並填份數；若填「指定NT$」則優先用指定金額</div>
+          ${splitRows}
         </div>
         <button class="add-money" id="add-money">新增支出並換算</button>
       </div>
@@ -424,6 +451,7 @@ function modalHTML(){
       <div class="modal-body">
         ${it.intro ? nl(it.intro) : ''}
         ${it.note ? `<div class="star-note">⭐ 備註<br>${nl(it.note)}</div>` : ''}
+        ${parkingHTML(parkingGroupFor(it))}
       </div>
     </div>
   </div>`;
@@ -460,8 +488,10 @@ function bind(){
     const amount=Number((document.getElementById('m-amount').value||'').replace(/[^0-9.]/g,''));
     const rate=Number((document.getElementById('m-rate').value||'').replace(/[^0-9.]/g,''));
     if(!item || !amount || !rate) return;
+    const twd=Math.round(amount*rate);
+    const splits=computeSplits(twd);
     state.rate=rate;
-    state.money.push({item,payer,method,amount,rate,twd:Math.round(amount*rate)});
+    state.money.push({item,payer,method,amount,rate,twd,splits});
     saveMoney();
     render(false);
   });
