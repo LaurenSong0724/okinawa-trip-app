@@ -167,13 +167,6 @@ footer{
 .welcome-title{font-size:1.9rem;font-weight:1000;color:#172033;line-height:1.15;margin-top:7px}
 .welcome-desc{margin-top:9px;color:#64748b;font-weight:900;font-size:.88rem}
 .welcome-btn{width:100%;margin-top:20px;border:0;border-radius:22px;padding:15px;background:#0ea5e9;color:white;font-size:1rem;font-weight:1000;box-shadow:0 6px 0 #0369a1}
-.money-card label{display:block;font-size:.78rem;color:#0369a1;font-weight:1000;margin:10px 0 4px}
-.money-input,.money-select{border:1px solid #bae6fd;border-radius:18px;padding:12px;background:white;width:100%;font-size:.9rem}
-.money-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.add-money{width:100%;margin-top:14px;background:#0ea5e9;color:white;border:0;border-radius:20px;padding:14px;font-weight:1000;box-shadow:0 5px 0 #0369a1;font-size:1rem}
-.money-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.money-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px}
-.money-delete{border:0;background:#fee2e2;color:#b91c1c;border-radius:999px;padding:7px 12px;font-weight:1000;margin-top:7px}
 @media(max-width:390px){:root{font-size:18px} header{padding-left:20px;padding-right:20px} .scroll{padding-left:16px;padding-right:16px;padding-top:230px} h1{font-size:1.65rem} .name{font-size:1.18rem}}
 
 .settlement-card{background:linear-gradient(135deg,rgba(255,255,255,.94),rgba(240,249,255,.92));}
@@ -216,13 +209,10 @@ const ICONS={"car": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAA
 let state={
   started: sessionStorage.getItem('okinawa_started') === 'yes',
   day: Number(localStorage.getItem('okinawa_day') || 0),
-  tab: localStorage.getItem('okinawa_tab') || 'trip',
-  modal: null,
-  money: JSON.parse(localStorage.getItem('okinawa_money_rows') || '[]'),
-  rate: Number(localStorage.getItem('jpy_rate') || '0.225')
+  tab: 'trip',
+  modal: null
 };
 if(!ITINERARY[state.day]) state.day=0;
-if(!['trip','money'].includes(state.tab)) state.tab='trip';
 
 function esc(s){
   return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -231,11 +221,6 @@ function nl(s){return esc(s).replace(/\n/g,'<br>');}
 function iconSrc(k){return ICONS[k] || ICONS.default;}
 function saveState(){
   localStorage.setItem('okinawa_day', String(state.day));
-  localStorage.setItem('okinawa_tab', state.tab);
-}
-function saveMoney(){
-  localStorage.setItem('okinawa_money_rows', JSON.stringify(state.money));
-  localStorage.setItem('jpy_rate', String(state.rate));
 }
 function getScrollKey(){
   return 'okinawa_scroll_' + state.tab + '_' + state.day;
@@ -297,10 +282,6 @@ function headerHTML(){
       </div>
       <div class="mini-icon"><img src="${iconSrc('default')}" /></div>
     </div>
-    <div class="tabs">
-      <button class="tab ${state.tab==='trip'?'active':''}" data-tab="trip">行程</button>
-      <button class="tab ${state.tab==='money'?'active':''}" data-tab="money">記帳</button>
-    </div>
   </header>`;
 }
 function dayHTML(){
@@ -342,134 +323,40 @@ function dayHTML(){
 }
 
 
-const PEOPLE=['大姐','豬豬','肥','佩蒂'];
-function computeSplits(total){
-  const people=PEOPLE;
-  const splits={}; people.forEach(p=>splits[p]=0);
-  const checked=[];
-  const fixed={};
-  let fixedSum=0;
-  people.forEach(p=>{
-    const isOn=document.getElementById('split-'+p)?.checked;
-    const fixedVal=Number((document.getElementById('fixed-'+p)?.value||'').replace(/[^0-9.]/g,''));
-    if(isOn) checked.push(p);
-    if(fixedVal>0){ fixed[p]=Math.round(fixedVal); fixedSum+=Math.round(fixedVal); }
-  });
-  if(fixedSum>0){
-    Object.keys(fixed).forEach(p=>splits[p]=fixed[p]);
-    const remaining=Math.max(0,total-fixedSum);
-    const sharePeople=people.filter(p=>checked.includes(p) && !fixed[p]);
-    if(remaining>0 && sharePeople.length){
-      let totalParts=0;
-      const parts={};
-      sharePeople.forEach(p=>{ const v=Number(document.getElementById('part-'+p)?.value||1); parts[p]=v>0?v:1; totalParts+=parts[p]; });
-      let used=0;
-      sharePeople.forEach((p,idx)=>{ const val=idx===sharePeople.length-1 ? remaining-used : Math.round(remaining*parts[p]/totalParts); splits[p]+=val; used+=val; });
-    }
-    return splits;
-  }
-  const sharePeople=checked.length?checked:people;
-  let totalParts=0;
-  const parts={};
-  sharePeople.forEach(p=>{ const v=Number(document.getElementById('part-'+p)?.value||1); parts[p]=v>0?v:1; totalParts+=parts[p]; });
-  let used=0;
-  sharePeople.forEach((p,idx)=>{ const val=idx===sharePeople.length-1 ? total-used : Math.round(total*parts[p]/totalParts); splits[p]=val; used+=val; });
-  return splits;
+const PARKING_GROUPS={
+  sanrio:[
+    {name:'コーラルパーキング安里', nav:'https://maps.app.goo.gl/oKsK8VsncYzJLF4Q9', price:'每40分鐘 ¥200，最高12小時 ¥800'},
+    {name:'ザ・パーク 安里1丁目', nav:'https://maps.app.goo.gl/M2Z5gfNEqVNpVwrU6', price:'每60分鐘 ¥200\n07:00-19:00 最高 ¥700\n19:00-07:00 最高 ¥500'},
+    {name:'ブレイク×ザ・パーク安里', nav:'https://maps.app.goo.gl/brwTGjbRXQzwhEBA7', price:'每30分鐘 ¥200，最高12小時 ¥900'},
+    {name:'テクニカルパーク安里第1', nav:'https://maps.app.goo.gl/HiueKyNu9R159n1f8', price:'最初90分鐘 ¥300，之後每30分鐘 ¥100，最高12小時 ¥700'},
+    {name:'Dパーキング 那覇市安里一丁目第一', nav:'https://maps.app.goo.gl/1goo6FCHoR8tEzVUA', price:'最初60分鐘 ¥400，之後每30分鐘 ¥300，最高24小時 ¥1800'}
+  ],
+  kokusai:[
+    {name:'テクニカルパーク牧志第3', nav:'https://maps.app.goo.gl/xA57ZVhR8q9zxJKu5', price:'每25分鐘 ¥100，最高12小時 ¥700'},
+    {name:'アップルパーク牧志1丁目第2', nav:'https://maps.app.goo.gl/m4zqauyq2M33B6kQ8', price:'每30分鐘 ¥100，最高12小時 ¥800'},
+    {name:'テクニカルパーク牧志第1', nav:'https://maps.app.goo.gl/wbn8shdtWwu3STss5', price:'每30分鐘 ¥100，最高12小時 ¥800'},
+    {name:'エコロパーク 国際通り第1', nav:'https://maps.app.goo.gl/iKYfiX58tQ5FoJRQA', price:'每30分鐘 ¥300，最高12小時 ¥800'},
+    {name:'ブレイクパーキング国際通り第2', nav:'https://maps.app.goo.gl/vUjunZTFC8SMEvs78', price:'每30分鐘 ¥300，最高12小時 ¥800'},
+    {name:'テクニカルパーク 松尾第1', nav:'https://maps.app.goo.gl/xyRnMbqFKQdvPsaLA', price:'每22分鐘 ¥100，最高12小時 ¥900'},
+    {name:'アップルパーク松尾2丁目第1', nav:'https://maps.app.goo.gl/amBgrCX3MHffTmvH7', price:'每15分鐘 ¥100，最高24小時 ¥1000'}
+  ]
+};
+function parkingGroupFor(it){
+  const name=(it&&it.name)||'';
+  if(name.includes('三麗鷗飯店')) return 'sanrio';
+  if(name.includes('國際通')) return 'kokusai';
+  return null;
 }
-function settlementHTML(){
-  const people=PEOPLE;
-  const paid={}; const owed={}; people.forEach(p=>{paid[p]=0; owed[p]=0;});
-  state.money.forEach(r=>{
-    if(paid[r.payer]!==undefined) paid[r.payer]+=Number(r.twd||0);
-    const splits=r.splits||{};
-    Object.keys(splits).forEach(p=>{ if(owed[p]!==undefined) owed[p]+=Number(splits[p]||0); });
-  });
-  const total=people.reduce((s,p)=>s+paid[p],0);
-  if(!total){
-    return `<div class="card settlement-card"><details class="settle-details"><summary>💰 查看最少轉帳結算</summary><div class="settle-details-body"><div class="settle-empty">目前還沒有支出。</div></div></details></div>`;
-  }
-  const creditors=[]; const debtors=[];
-  people.forEach(p=>{
-    const bal=Math.round(paid[p]-owed[p]);
-    if(bal>0) creditors.push({p,amt:bal});
-    if(bal<0) debtors.push({p,amt:-bal});
-  });
-  creditors.sort((a,b)=>b.amt-a.amt); debtors.sort((a,b)=>b.amt-a.amt);
-  let i=0,j=0,tx=[];
-  while(i<debtors.length && j<creditors.length){
-    const amt=Math.min(debtors[i].amt,creditors[j].amt);
-    if(amt>0) tx.push({from:debtors[i].p,to:creditors[j].p,amt});
-    debtors[i].amt-=amt; creditors[j].amt-=amt;
-    if(debtors[i].amt<=0) i++;
-    if(creditors[j].amt<=0) j++;
-  }
-  const transfers=tx.length?tx.map(t=>`<div class="settle-transfer"><b>${esc(t.from)}</b> 轉給 <b>${esc(t.to)}</b><br><span>NT$ ${t.amt.toLocaleString()}</span></div>`).join(''):'<div class="settle-empty">目前不需要轉帳。</div>';
-  return `<div class="card settlement-card">
-    <details class="settle-details"><summary>💰 查看最少轉帳結算</summary><div class="settle-details-body">${transfers}</div></details>
-  </div>`;
+function parkingHTML(group){
+  if(!group || !PARKING_GROUPS[group]) return '';
+  const rows=PARKING_GROUPS[group].map(p=>`<div class="parking-card">
+    <div class="parking-name">${esc(p.name)}</div>
+    <div class="parking-price">${nl(p.price)}</div>
+    <a class="parking-map" href="${esc(p.nav)}" target="_blank" rel="noopener">Google Map 導航</a>
+  </div>`).join('');
+  return `<details class="parking-box"><summary>🚗 查看附近停車場 <span>＋</span></summary><div class="parking-list">${rows}</div></details>`;
 }
-function moneyHTML(){
-  const people=PEOPLE;
-  const totalJPY=state.money.reduce((sum,r)=>sum+Number(r.amount||0),0);
-  const totalTWD=state.money.reduce((sum,r)=>sum+Number(r.twd||0),0);
-  const rows=state.money.map((r,i)=>{
-    const splitText=Object.entries(r.splits||{}).filter(([p,v])=>Number(v)>0).map(([p,v])=>`${p} NT$ ${Number(v).toLocaleString()}`).join('、');
-    return `<div class="item-card">
-      <div class="money-row">
-        <div>
-          <div class="name">${esc(r.item)}</div>
-          <div class="money-meta">
-            <span class="tag-btn">👤 ${esc(r.payer)}</span>
-            <span class="tag-btn">💳 ${esc(r.method)}</span>
-            <span class="tag-btn">匯率 ${esc(r.rate)}</span>
-          </div>
-          ${splitText?`<div style="margin-top:7px;font-size:.78rem;font-weight:850;color:#64748b">分攤：${esc(splitText)}</div>`:''}
-          <button class="money-delete" data-del="${i}">刪除</button>
-        </div>
-        <div style="text-align:right;font-weight:1000;color:#f97316">
-          <div>¥ ${Number(r.amount).toLocaleString()}</div>
-          <div style="color:#0369a1;font-size:.86rem">NT$ ${Number(r.twd).toLocaleString()}</div>
-        </div>
-      </div>
-    </div>`
-  }).join('');
-  const splitRows=people.map(p=>`<div class="split-person"><label><input type="checkbox" id="split-${p}" checked />${p}</label><input id="part-${p}" type="number" min="0" step="0.5" value="1" placeholder="份數" /><input id="fixed-${p}" type="text" inputmode="numeric" placeholder="指定NT$" /></div>`).join('');
-  return `<main class="scroll">
-    <section>
-      <div class="card money-card">
-        <div class="day-head">
-          <div>
-            <div class="day-label">MONEY</div>
-            <div class="day-title">沖繩記帳</div>
-          </div>
-          <div class="mini-icon"><img src="${iconSrc('shopping')}" /></div>
-        </div>
-        <label>支出項目</label>
-        <input class="money-input" id="m-item" placeholder="例如：晚餐、停車費、藥妝" />
-        <div class="money-grid">
-          <div><label>付款人</label><select class="money-select" id="m-payer"><option>大姐</option><option>豬豬</option><option>肥</option><option>佩蒂</option></select></div>
-          <div><label>支付方式</label><select class="money-select" id="m-method"><option>現金</option><option>信用卡</option></select></div>
-        </div>
-        <div class="money-grid">
-          <div><label>金額（日圓）</label><input class="money-input" id="m-amount" inputmode="numeric" placeholder="JPY" /></div>
-          <div><label>匯率</label><input class="money-input" id="m-rate" inputmode="decimal" value="${esc(state.rate)}" /></div>
-        </div>
-        <div class="split-box">
-          <div class="split-title">分攤設定：誰要分攤就勾誰；份數可填 0.5 / 1 / 2；若填「指定NT$」會優先用指定金額。</div>
-          ${splitRows}
-        </div>
-        <button class="add-money" id="add-money">新增支出並換算</button>
-      </div>
-      <div class="card">
-        <div class="day-label">總支出</div>
-        <div class="day-title">¥ ${totalJPY.toLocaleString()}</div>
-        <div style="font-weight:1000;color:#0ea5e9;font-size:1.2rem">≈ NT$ ${totalTWD.toLocaleString()}</div>
-      </div>
-      ${settlementHTML()}
-      ${rows}
-    </section>
-  </main>`;
-}
+
 function modalHTML(){
   if(state.modal===null) return '';
   const d=ITINERARY[state.day];
@@ -493,7 +380,7 @@ function modalHTML(){
   </div>`;
 }
 function appHTML(){
-  return headerHTML() + (state.tab==='trip' ? dayHTML() : moneyHTML());
+  return headerHTML() + dayHTML();
 }
 function render(keepScroll=true){
   const before=document.querySelector('.scroll');
@@ -511,29 +398,11 @@ function render(keepScroll=true){
 }
 function bind(){
   document.querySelector('[data-start]')?.addEventListener('click',()=>{state.started=true;sessionStorage.setItem('okinawa_started','yes');render(false);});
-  document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{rememberScroll();state.tab=b.dataset.tab;saveState();render(false);}));
   document.querySelectorAll('[data-day]').forEach(b=>b.addEventListener('click',()=>{rememberScroll();state.day=Number(b.dataset.day);saveState();render(false);}));
   document.querySelector('[data-prev]')?.addEventListener('click',()=>{rememberScroll();state.day=(state.day-1+ITINERARY.length)%ITINERARY.length;saveState();render(false);});
   document.querySelector('[data-next]')?.addEventListener('click',()=>{rememberScroll();state.day=(state.day+1)%ITINERARY.length;saveState();render(false);});
   document.querySelectorAll('[data-info]').forEach(b=>b.addEventListener('click',()=>{rememberScroll();sessionStorage.setItem('okinawa_last_scroll', String(currentScrollTop()));state.modal=Number(b.dataset.info);showModal();}));
     document.querySelectorAll('a.tag-btn').forEach(a=>a.addEventListener('click',()=>{rememberScroll();sessionStorage.setItem('okinawa_last_scroll', String(currentScrollTop()));}));
-  document.getElementById('add-money')?.addEventListener('click',()=>{
-    const item=document.getElementById('m-item').value.trim();
-    const payer=document.getElementById('m-payer').value;
-    const method=document.getElementById('m-method').value;
-    const amount=Number((document.getElementById('m-amount').value||'').replace(/[^0-9.]/g,''));
-    const rate=Number((document.getElementById('m-rate').value||'').replace(/[^0-9.]/g,''));
-    if(!item || !amount || !rate) return;
-    const twd=Math.round(amount*rate);
-    const splits=computeSplits(twd);
-    const splitTotal=Object.values(splits).reduce((a,b)=>a+Number(b||0),0);
-    if(!splitTotal){ alert('請至少選一位分攤者，或填指定 NT$ 金額。'); return; }
-    state.rate=rate;
-    state.money.push({item,payer,method,amount,rate,twd,splits});
-    saveMoney();
-    render(false);
-  });
-  document.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{state.money.splice(Number(b.dataset.del),1);saveMoney();render(true);}));
 }
 window.addEventListener('pagehide', ()=>{rememberScroll();sessionStorage.setItem('okinawa_last_scroll', String(currentScrollTop()));});
 window.addEventListener('visibilitychange', ()=>{if(document.hidden){rememberScroll();sessionStorage.setItem('okinawa_last_scroll', String(currentScrollTop()));}});
