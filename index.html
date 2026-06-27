@@ -212,6 +212,9 @@ footer{
 .bag-tabs{display:flex;gap:8px;margin-top:14px;background:rgba(240,249,255,.72);padding:6px;border-radius:999px;border:1px solid #bae6fd}
 .bag-tab{flex:1;border:0;border-radius:999px;background:transparent;color:#0369a1;font-weight:1000;padding:10px 8px;font-size:.9rem}
 .bag-tab.active{background:#0ea5e9;color:white;box-shadow:0 4px 0 #7dd3fc}
+.person-tabs{display:flex;gap:8px;margin-top:10px;overflow-x:auto;padding:2px 0 4px;-webkit-overflow-scrolling:touch}
+.person-tab{flex:0 0 auto;border:1px solid #bae6fd;border-radius:999px;background:white;color:#0369a1;font-weight:1000;padding:9px 16px;font-size:.86rem;box-shadow:0 3px 0 #e0f2fe}
+.person-tab.active{background:#0ea5e9;color:white;border-color:#0ea5e9;box-shadow:0 4px 0 #7dd3fc}
 .progress-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 .progress-row{display:grid;grid-template-columns:54px 1fr 46px;align-items:center;gap:9px;font-size:.82rem;font-weight:1000;color:#334155}
 .progress-name{color:#0369a1;white-space:nowrap}
@@ -253,11 +256,13 @@ let state={
   day: Number(localStorage.getItem('okinawa_day') || 0),
   tab: localStorage.getItem('okinawa_tab') || 'trip',
   bag: localStorage.getItem('okinawa_bag') || 'carry',
+  person: localStorage.getItem('okinawa_person') || '大姐',
   modal: null
 };
 if(!ITINERARY[state.day]) state.day=0;
-if(!['trip','packing'].includes(state.tab)) state.tab='trip';
+if(!['trip','packing','tax'].includes(state.tab)) state.tab='trip';
 if(!['carry','checked'].includes(state.bag)) state.bag='carry';
+if(!['大姐','豬豬','肥','佩蒂'].includes(state.person)) state.person='大姐';
 
 const SUPABASE_URL='https://amnzqnhzcoirntblujfl.supabase.co';
 const SUPABASE_KEY='sb_publishable_qa7ZRDGBjttyGSaEbXFecg_gamPZG8W';
@@ -286,6 +291,7 @@ function saveState(){
   localStorage.setItem('okinawa_day', String(state.day));
   localStorage.setItem('okinawa_tab', state.tab);
   localStorage.setItem('okinawa_bag', state.bag);
+  localStorage.setItem('okinawa_person', state.person);
 }
 function getScrollKey(){
   return 'okinawa_scroll_' + state.tab + '_' + state.day;
@@ -351,6 +357,7 @@ function headerHTML(){
     <div class="tabs">
       <button class="tab ${state.tab==='trip'?'active':''}" data-tab="trip">行程</button>
       <button class="tab ${state.tab==='packing'?'active':''}" data-tab="packing">行李</button>
+      <button class="tab ${state.tab==='tax'?'active':''}" data-tab="tax">退稅</button>
     </div>
   </header>`;
 }
@@ -485,9 +492,12 @@ function packingHTML(){
         <button class="bag-tab ${state.bag==='carry'?'active':''}" data-bag="carry">隨身物品</button>
         <button class="bag-tab ${state.bag==='checked'?'active':''}" data-bag="checked">托運行李</button>
       </div>
+      <div class="person-tabs">
+        ${PEOPLE.map(p=>`<button class="person-tab ${state.person===p?'active':''}" data-person="${esc(p)}">${esc(p)}</button>`).join('')}
+      </div>
     </div>
     ${progressHTML()}
-    ${PEOPLE.map(personPackingHTML).join('')}
+    ${personPackingHTML(state.person)}
     ${sharedHTML()}
   </section></main>`;
 }
@@ -603,8 +613,31 @@ function modalHTML(){
     </div>
   </div>`;
 }
+
+function taxHTML(){
+  return `<main class="scroll tax-page"><section>
+    <div class="card day-card">
+      <div class="day-head">
+        <div>
+          <div class="day-label">JAPAN TAX FREE</div>
+          <div class="day-title">🧾 日本退稅規定</div>
+        </div>
+        <div class="mini-icon"><img src="${iconSrc('shopping')}" /></div>
+      </div>
+      <div class="day-note">2026/7/27 出境前可先參考，實際仍以店家與日本海關現場規定為準。</div>
+    </div>
+    <div class="card">
+      <div class="modal-body" style="max-height:none;overflow:visible;white-space:pre-line;line-height:1.8;">
+免稅商品主要分為「一般物品」和「消耗品」兩大類。例如，家電產品、服飾、包包、手錶等日用品和雜貨屬於一般物品；食品、化妝品、藥品等屬於消耗品；購買總金額達5,000日圓以上，才符合免稅條件。 
+
+另外，一般物品和消耗品也可以合併計算作為免稅對象，但這種情況下，一般物品也必須和消耗品一樣進行指定包裝（特殊包裝）。此時，所有商品都視為消耗品，旅客必須未開封攜帶出境，並在出境時於海關出示。
+      </div>
+    </div>
+  </section></main>`;
+}
+
 function appHTML(){
-  return headerHTML() + (state.tab==='packing' ? packingHTML() : dayHTML());
+  return headerHTML() + (state.tab==='packing' ? packingHTML() : (state.tab==='tax' ? taxHTML() : dayHTML()));
 }
 function render(keepScroll=true){
   const before=document.querySelector('.scroll');
@@ -624,6 +657,7 @@ function bind(){
   document.querySelector('[data-start]')?.addEventListener('click',()=>{state.started=true;sessionStorage.setItem('okinawa_started','yes');render(false);});
   document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{rememberScroll();state.tab=b.dataset.tab;saveState();if(state.tab==='packing') initPackingSync();render(false);}));
   document.querySelectorAll('[data-bag]').forEach(b=>b.addEventListener('click',()=>{rememberScroll();state.bag=b.dataset.bag;saveState();render(false);}));
+  document.querySelectorAll('[data-person]').forEach(b=>b.addEventListener('click',()=>{rememberScroll();state.person=b.dataset.person;saveState();render(false);}));
   document.querySelectorAll('[data-day]').forEach(b=>b.addEventListener('click',()=>{rememberScroll();state.day=Number(b.dataset.day);saveState();render(false);}));
   document.querySelector('[data-prev]')?.addEventListener('click',()=>{rememberScroll();state.day=(state.day-1+ITINERARY.length)%ITINERARY.length;saveState();render(false);});
   document.querySelector('[data-next]')?.addEventListener('click',()=>{rememberScroll();state.day=(state.day+1)%ITINERARY.length;saveState();render(false);});
