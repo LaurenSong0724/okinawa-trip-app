@@ -51,21 +51,21 @@ button,input,select{font-family:inherit}
 .glass{background:rgba(255,250,245,.92);backdrop-filter:blur(16px)}
 header{
   position:absolute;top:0;left:0;right:0;z-index:40;
-  padding:18px 28px 14px;
+  padding:12px 24px 10px;
   border-bottom:1px solid rgba(186,230,253,.75);
 }
 .kicker{font-size:.8rem;font-weight:1000;color:#f97316;letter-spacing:.13em}
 .title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-h1{font-size:2rem;line-height:1.12;margin:.2rem 0 0;font-weight:1000;color:#172033;letter-spacing:.02em}
-.subtitle{font-size:1rem;font-weight:900;color:#64748b;margin-top:.35rem}
-.tabs{display:flex;gap:14px;margin-top:16px}
-.tab{border:1px solid #bae6fd;border-radius:999px;padding:13px 22px;background:white;color:#0369a1;font-weight:1000;font-size:1rem}
+h1{font-size:1.86rem;line-height:1.08;margin:.15rem 0 0;font-weight:1000;color:#172033;letter-spacing:.02em}
+.subtitle{font-size:.92rem;font-weight:900;color:#64748b;margin-top:.25rem}
+.tabs{display:flex;gap:12px;margin-top:12px}
+.tab{border:1px solid #bae6fd;border-radius:999px;padding:11px 20px;background:white;color:#0369a1;font-weight:1000;font-size:.96rem}
 .tab.active{background:#0ea5e9;color:white;border-color:#0ea5e9}
 .scroll{
   height:100%;
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
-  padding:220px 22px 128px;
+  padding:235px 22px 128px;
 }
 .scroll::-webkit-scrollbar{width:4px} .scroll::-webkit-scrollbar-thumb{background:#7dd3fc;border-radius:10px}
 .card{
@@ -167,7 +167,7 @@ footer{
 .welcome-title{font-size:1.9rem;font-weight:1000;color:#172033;line-height:1.15;margin-top:7px}
 .welcome-desc{margin-top:9px;color:#64748b;font-weight:900;font-size:.88rem}
 .welcome-btn{width:100%;margin-top:20px;border:0;border-radius:22px;padding:15px;background:#0ea5e9;color:white;font-size:1rem;font-weight:1000;box-shadow:0 6px 0 #0369a1}
-@media(max-width:390px){:root{font-size:18px} header{padding-left:20px;padding-right:20px} .scroll{padding-left:16px;padding-right:16px;padding-top:210px} h1{font-size:1.65rem} .name{font-size:1.18rem}}
+@media(max-width:390px){:root{font-size:18px} header{padding-left:18px;padding-right:18px} .scroll{padding-left:16px;padding-right:16px;padding-top:230px} h1{font-size:1.58rem} .name{font-size:1.18rem}}
 
 .settlement-card{background:linear-gradient(135deg,rgba(255,255,255,.94),rgba(240,249,255,.92));}
 .settle-summary{font-weight:900;color:#475569;margin:.4rem 0 .8rem;font-size:.86rem}
@@ -446,7 +446,6 @@ function sortedRows(rows){
 function progressHTML(){
   return `<div class="card">
     <div class="packing-title">🧳 打包完成率</div>
-    <div class="packing-sub">依照每個人的隨身＋托運清單自動計算</div>
     <div class="progress-list">
       ${PEOPLE.map(p=>{const r=packingPercent(p);return `<div class="progress-row"><div class="progress-name">${esc(p)}</div><div class="progress-bar"><div class="progress-fill" style="width:${r.pct}%"></div></div><div class="progress-pct">${r.total?r.pct+'%':'--'}</div></div>`}).join('')}
     </div>
@@ -483,10 +482,7 @@ function sharedHTML(){
 function packingHTML(){
   return `<main class="scroll packing-page"><section>
     <div class="card day-card">
-      <div class="packing-head">
-        <div><div class="day-label">SUPABASE SYNC</div><div class="packing-title">🧳 沖繩行李清單</div><div class="packing-sub">四個人手機會同步更新新增、刪除與打勾狀態</div></div>
-        <span class="sync-badge">● ${esc(packingStatus)}</span>
-      </div>
+      <div class="packing-title">🧳 沖繩行李清單</div>
       <div class="bag-tabs">
         <button class="bag-tab ${state.bag==='carry'?'active':''}" data-bag="carry">隨身物品</button>
         <button class="bag-tab ${state.bag==='checked'?'active':''}" data-bag="checked">托運行李</button>
