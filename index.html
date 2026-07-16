@@ -244,7 +244,7 @@ footer{
 @media(max-width:390px){.shared-add{grid-template-columns:1fr 84px}.shared-add button{grid-column:1/3}.progress-row{grid-template-columns:48px 1fr 42px}.tab{padding:11px 18px}}
 
 
-/* 伴手禮分頁 */
+/* 買買買分頁 */
 .souvenir-page .card{background:rgba(255,255,255,.95)}
 .souvenir-person-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
 .souvenir-person-tab{border:1px solid #bae6fd;border-radius:999px;padding:9px 6px;background:#fff;color:#0369a1;font-weight:1000;font-size:.86rem}
@@ -396,7 +396,7 @@ function headerHTML(){
     <div class="tabs">
       <button class="tab ${state.tab==='trip'?'active':''}" data-tab="trip">行程</button>
       <button class="tab ${state.tab==='packing'?'active':''}" data-tab="packing">行李</button>
-      <button class="tab ${state.tab==='souvenir'?'active':''}" data-tab="souvenir">伴手禮</button>
+      <button class="tab ${state.tab==='souvenir'?'active':''}" data-tab="souvenir">買買買</button>
       <button class="tab ${state.tab==='tax'?'active':''}" data-tab="tax">退稅</button>
     </div>
   </header>`;
@@ -630,7 +630,7 @@ async function editShared(id){
 
 function souvenirItemHTML(row){
   const done=!!row.purchased;
-  const image=row.image_url ? `<div class="souvenir-photo"><img src="${esc(row.image_url)}" alt="${esc(row.item||'伴手禮')}" loading="lazy" /></div>` : `<div class="souvenir-photo"><div class="souvenir-placeholder">🎁</div></div>`;
+  const image=row.image_url ? `<div class="souvenir-photo"><img src="${esc(row.image_url)}" alt="${esc(row.item||'買買買')}" loading="lazy" /></div>` : `<div class="souvenir-photo"><div class="souvenir-placeholder">🎁</div></div>`;
   return `<div class="card souvenir-card">
     ${image}
     <div class="souvenir-body">
@@ -648,11 +648,11 @@ function souvenirHTML(){
   const rows=[...souvenirItems].filter(x=>x.person===state.souvenirPerson).sort((a,b)=>Number(a.purchased)-Number(b.purchased)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
   return `<main class="scroll souvenir-page"><section>
     <div class="card day-card">
-      <div class="packing-title">🎁 伴手禮清單</div>
+      <div class="packing-title">🎁 買買買清單</div>
       <div class="souvenir-person-tabs">${PEOPLE.map(p=>`<button class="souvenir-person-tab ${state.souvenirPerson===p?'active':''}" data-souvenir-person="${esc(p)}">${esc(p)}</button>`).join('')}</div>
     </div>
     <div class="card">
-      <div class="packing-title">新增 ${esc(state.souvenirPerson)} 的伴手禮</div>
+      <div class="packing-title">新增 ${esc(state.souvenirPerson)} 的買買買</div>
       <div class="souvenir-add" data-souvenir-form>
         <input type="text" data-souvenir-name placeholder="商品名稱，例如：沖繩限定 Lululun 面膜" />
         <textarea data-souvenir-note placeholder="備註（選填），例如：札幌藥妝、買 2 盒、包裝長這樣"></textarea>
@@ -661,10 +661,10 @@ function souvenirHTML(){
           <label class="souvenir-file-label">🖼️ 從相簿選擇<input type="file" accept="image/*" data-souvenir-file="album" /></label>
         </div>
         <img class="souvenir-preview" data-souvenir-preview alt="圖片預覽" />
-        <button class="souvenir-add-btn" data-souvenir-add>新增伴手禮</button>
+        <button class="souvenir-add-btn" data-souvenir-add>新增買買買</button>
       </div>
     </div>
-    <div class="souvenir-grid">${rows.length?rows.map(souvenirItemHTML).join(''):`<div class="card pack-empty">${esc(state.souvenirPerson)}目前沒有伴手禮，請從上方新增。</div>`}</div>
+    <div class="souvenir-grid">${rows.length?rows.map(souvenirItemHTML).join(''):`<div class="card pack-empty">${esc(state.souvenirPerson)}目前沒有買買買，請從上方新增。</div>`}</div>
   </section></main>`;
 }
 async function loadSouvenirs(){
@@ -738,7 +738,7 @@ async function toggleSouvenir(id){
   if(error) alert('更新失敗：'+error.message); else loadSouvenirs();
 }
 async function deleteSouvenir(id){
-  const row=souvenirItems.find(x=>String(x.id)===String(id)); if(!row||!confirm('確定刪除這個伴手禮嗎？')||!ensureSupabase()) return;
+  const row=souvenirItems.find(x=>String(x.id)===String(id)); if(!row||!confirm('確定刪除這個買買買嗎？')||!ensureSupabase()) return;
   const {error}=await sb.from('souvenir_items').delete().eq('id',id);
   if(error) return alert('刪除失敗：'+error.message);
   if(row.image_url){
@@ -749,7 +749,7 @@ async function deleteSouvenir(id){
         const objectPath=decodeURIComponent(row.image_url.slice(idx+marker.length));
         if(objectPath) await sb.storage.from('souvenir-images').remove([objectPath]);
       }
-    }catch(e){console.warn('圖片刪除失敗，但伴手禮資料已刪除',e);}
+    }catch(e){console.warn('圖片刪除失敗，但買買買資料已刪除',e);}
   }
   loadSouvenirs();
 }
