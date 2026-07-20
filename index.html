@@ -273,6 +273,13 @@ footer{
 .souvenir-preview{display:none;width:100%;max-height:260px;object-fit:contain;border-radius:18px;border:1px solid #bae6fd;background:#fff}
 .souvenir-add-btn{border:0;border-radius:18px;background:#0ea5e9;color:#fff;padding:13px;font-weight:1000;box-shadow:0 5px 0 #7dd3fc}
 .souvenir-uploading{opacity:.65;pointer-events:none}
+.souvenir-section{margin-bottom:18px}
+.souvenir-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 4px 10px;padding:10px 14px;border-radius:18px;background:rgba(255,255,255,.94);border:1px solid #bae6fd;font-weight:1000;color:#075985;box-shadow:0 5px 14px rgba(14,165,233,.08)}
+.souvenir-section-head.done{color:#64748b;border-color:#dbeafe;background:rgba(248,250,252,.94)}
+.souvenir-count{min-width:32px;text-align:center;border-radius:999px;padding:3px 9px;background:#e0f2fe;color:#0369a1;font-size:.78rem}
+.souvenir-section-head.done .souvenir-count{background:#e2e8f0;color:#64748b}
+.souvenir-card{transition:transform .22s ease,opacity .22s ease}
+.souvenir-card.is-done{opacity:.78}
 @media(min-width:520px){.souvenir-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:390px){.tabs{gap:7px}.tab{padding:10px 13px;font-size:.86rem}.souvenir-person-tabs{gap:6px}.souvenir-person-tab{font-size:.8rem;padding:8px 3px}}
 
@@ -631,7 +638,7 @@ async function editShared(id){
 function souvenirItemHTML(row){
   const done=!!row.purchased;
   const image=row.image_url ? `<div class="souvenir-photo"><img src="${esc(row.image_url)}" alt="${esc(row.item||'買買買')}" loading="lazy" /></div>` : `<div class="souvenir-photo"><div class="souvenir-placeholder">🎁</div></div>`;
-  return `<div class="card souvenir-card">
+  return `<div class="card souvenir-card ${done?'is-done':''}">
     ${image}
     <div class="souvenir-body">
       <div class="souvenir-name ${done?'done':''}">${esc(row.item||'')}</div>
@@ -645,7 +652,9 @@ function souvenirItemHTML(row){
   </div>`;
 }
 function souvenirHTML(){
-  const rows=[...souvenirItems].filter(x=>x.person===state.souvenirPerson).sort((a,b)=>Number(a.purchased)-Number(b.purchased)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  const personRows=[...souvenirItems].filter(x=>x.person===state.souvenirPerson);
+  const pendingRows=personRows.filter(x=>!x.purchased).sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  const purchasedRows=personRows.filter(x=>!!x.purchased).sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||'')));
   return `<main class="scroll souvenir-page"><section>
     <div class="card day-card">
       <div class="packing-title">🎁 買買買清單</div>
@@ -664,7 +673,15 @@ function souvenirHTML(){
         <button class="souvenir-add-btn" data-souvenir-add>新增買買買</button>
       </div>
     </div>
-    <div class="souvenir-grid">${rows.length?rows.map(souvenirItemHTML).join(''):`<div class="card pack-empty">${esc(state.souvenirPerson)}目前沒有買買買，請從上方新增。</div>`}</div>
+    ${personRows.length ? `
+      <div class="souvenir-section">
+        <div class="souvenir-section-head"><span>🛒 尚未購買</span><span class="souvenir-count">${pendingRows.length}</span></div>
+        <div class="souvenir-grid">${pendingRows.length ? pendingRows.map(souvenirItemHTML).join('') : `<div class="card pack-empty">全部都買齊了！</div>`}</div>
+      </div>
+      <div class="souvenir-section">
+        <div class="souvenir-section-head done"><span>✅ 已購買</span><span class="souvenir-count">${purchasedRows.length}</span></div>
+        <div class="souvenir-grid">${purchasedRows.length ? purchasedRows.map(souvenirItemHTML).join('') : `<div class="card pack-empty">目前還沒有已購買商品。</div>`}</div>
+      </div>` : `<div class="card pack-empty">${esc(state.souvenirPerson)}目前沒有買買買，請從上方新增。</div>`}
   </section></main>`;
 }
 async function loadSouvenirs(){
